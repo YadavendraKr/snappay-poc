@@ -5,6 +5,7 @@
 set -e
 
 ACTION="${1:-up}"
+COMPOSE_CMD=""
 
 check_podman() {
     if ! command -v podman &> /dev/null; then
@@ -13,14 +14,56 @@ check_podman() {
         exit 1
     fi
 
-    if ! command -v podman-compose &> /dev/null; then
-        echo "❌ Podman Compose is not installed"
-        echo "Please follow the installation guide: PODMAN_SETUP.md"
-        exit 1
+    # Linux/Codespaces specific: Ensure the user-level Podman socket is active
+    if [ "$(uname)" == "Linux" ]; then
+        # Reset variables to prevent connection to restricted root sockets
+        export DOCKER_HOST=""
+        export CONTAINER_HOST=""
+
+        # Standardize XDG_RUNTIME_DIR for rootless operation
+        export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+        if [ ! -d "$XDG_RUNTIME_DIR" ]; then
+            export XDG_RUNTIME_DIR="/tmp/podman-$(id -u)"
+            mkdir -p "$XDG_RUNTIME_DIR"
+            chmod 700 "$XDG_RUNTIME_DIR"
+        fi
+
+        # Define and export the rootless socket path
+        USER_SOCKET="$XDG_RUNTIME_DIR/podman/podman.sock"
+        mkdir -p "$(dirname "$USER_SOCKET")"
+        export CONTAINER_HOST="unix://$USER_SOCKET"
+        export DOCKER_HOST="unix://$USER_SOCKET"
+
+        # Clean up stale service and socket files
+        echo "🔄 Resetting Podman API service..."
+        pkill -u "$(id -u)" -f "podman system service" || true
+        rm -f "$USER_SOCKET"
+
+        # Start Podman API service explicitly bound to the rootless socket
+        podman system service --time=0 "unix://$USER_SOCKET" &
+
+        # Wait for the socket to initialize
+        for i in {1..10}; do
+            [ -S "$USER_SOCKET" ] && break
+            sleep 1
+        done
+    fi
+
+    if podman compose version &> /dev/null; then
+        COMPOSE_CMD="podman compose"
+    elif command -v podman-compose &> /dev/null; then
+        COMPOSE_CMD="podman-compose"
+    else
+        echo "❌ Podman Compose utility not found."
+        echo "Attempting to install podman-compose..."
+        pip3 install podman-compose --user && COMPOSE_CMD="podman-compose" || {
+            echo "❌ Failed to install podman-compose. Please check PODMAN_SETUP.md"
+            exit 1
+        }
     fi
 
     echo "✅ Podman: $(podman --version)"
-    echo "✅ Podman Compose: $(podman-compose --version)"
+    echo "✅ Compose Provider: $COMPOSE_CMD"
 }
 
 start_containers() {
@@ -29,25 +72,25 @@ start_containers() {
     echo "This may take several minutes on first run."
     echo ""
     
-    podman-compose up --build
+    $COMPOSE_CMD up --build
 }
 
 start_containers_detached() {
     echo ""
     echo "🚀 Building and starting Snappay containers in background..."
     
-    podman-compose up -d --build
+    $COMPOSE_CMD up -d --build
     
     echo ""
     echo "✅ Containers started in background"
-    echo "View logs with: podman-compose logs -f"
+    echo "View logs with: $COMPOSE_CMD logs -f"
 }
 
 stop_containers() {
     echo ""
     echo "🛑 Stopping containers..."
     
-    podman-compose down
+    $COMPOSE_CMD down
     
     echo ""
     echo "✅ Containers stopped"
@@ -57,14 +100,14 @@ view_logs() {
     echo ""
     echo "📋 Showing container logs (press Ctrl+C to exit)..."
     
-    podman-compose logs -f
+    $COMPOSE_CMD logs -f
 }
 
 rebuild_containers() {
     echo ""
     echo "🔨 Rebuilding containers without cache..."
     
-    podman-compose up --build --no-cache
+    $COMPOSE_CMD up --build --no-cache
 }
 
 list_containers() {
