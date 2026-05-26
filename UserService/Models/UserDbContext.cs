@@ -6,12 +6,11 @@ namespace UserService.Models
 {
     public class UserDbContext : DbContext
     {
-        public DbSet<User> Users { get; set; }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
         {
-            optionsBuilder.UseInMemoryDatabase("UserServiceDb");
         }
+
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
