@@ -1,7 +1,6 @@
 #!/bin/bash
 # Podman build and run script for Snappay microservices with Dapr
 # Podman is a daemonless container engine (more secure than Docker)
-=
 set -e
 
 ACTION="${1:-up}"
@@ -16,10 +15,6 @@ check_podman() {
 
     # Linux/Codespaces specific: Ensure the user-level Podman socket is active
     if [ "$(uname)" == "Linux" ]; then
-        # Reset variables to prevent connection to restricted root sockets
-        export DOCKER_HOST=""
-        export CONTAINER_HOST=""
-
         # Standardize XDG_RUNTIME_DIR for rootless operation
         export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
         if [ ! -d "$XDG_RUNTIME_DIR" ]; then
@@ -28,11 +23,9 @@ check_podman() {
             chmod 700 "$XDG_RUNTIME_DIR"
         fi
 
-        # Define and export the rootless socket path
+        # Define the rootless socket path
         USER_SOCKET="$XDG_RUNTIME_DIR/podman/podman.sock"
         mkdir -p "$(dirname "$USER_SOCKET")"
-        export CONTAINER_HOST="unix://$USER_SOCKET"
-        export DOCKER_HOST="unix://$USER_SOCKET"
 
         # Clean up stale service and socket files
         echo "🔄 Resetting Podman API service..."
@@ -40,13 +33,17 @@ check_podman() {
         rm -f "$USER_SOCKET"
 
         # Start Podman API service explicitly bound to the rootless socket
-        podman system service --time=0 "unix://$USER_SOCKET" &
+        podman system service --time=0 unix://"$USER_SOCKET" &
 
         # Wait for the socket to initialize
         for i in {1..10}; do
             [ -S "$USER_SOCKET" ] && break
             sleep 1
         done
+
+        # Export the connection env vars after the service is started
+        export CONTAINER_HOST="unix://$USER_SOCKET"
+        export DOCKER_HOST="unix://$USER_SOCKET"
     fi
 
     if podman compose version &> /dev/null; then
