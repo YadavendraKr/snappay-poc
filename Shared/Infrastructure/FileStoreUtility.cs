@@ -14,6 +14,18 @@ public static class FileStoreUtility
 
     static FileStoreUtility()
     {
+        var envPath = Environment.GetEnvironmentVariable("FileStore__Path");
+        if (!string.IsNullOrWhiteSpace(envPath))
+        {
+            _filePath = Path.GetFullPath(envPath);
+            var folder = Path.GetDirectoryName(_filePath);
+            if (!string.IsNullOrWhiteSpace(folder) && !Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            return;
+        }
+
         var basePath = AppDomain.CurrentDomain.BaseDirectory;
         var directory = new DirectoryInfo(basePath);
         while (directory != null && !directory.Name.Contains("snappay-poc"))
