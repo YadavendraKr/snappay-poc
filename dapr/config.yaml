@@ -1,0 +1,35 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: snappay-config
+spec:
+  logging:
+    level: debug
+  tracing:
+    samplingRate: "1"
+    zipkin:
+      endpointAddress: "http://zipkin:9411/api/v2/spans"
+  api:
+    allowed:
+      - name: secrets
+        version: v1
+      - name: state
+        version: v1
+      - name: pubsub
+        version: v1
+      - name: actors
+        version: v1
+      - name: bindings
+        version: v1
+      - name: invoke
+        version: v1
+      - name: configuration
+        version: v1
+  accessControl:
+    trustDomain: "public"
+    allowedApps:
+      - customer-service
+      - order-service
+      - inventory-service
+      - user-service
+    defaultAction: "allow"

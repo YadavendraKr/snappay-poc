@@ -1,0 +1,207 @@
+version: '3.8'
+
+services:
+  # Redis for state management
+  redis:
+    image: redis:7.2-alpine
+    container_name: snappay_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - snappay-network
+
+  # ===== CUSTOMER SERVICE =====
+  customer-service:
+    build:
+      context: .
+      dockerfile: CustomerService/Dockerfile
+    container_name: customer_service
+    ports:
+      - "7000:7000"
+      - "7001:7001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:7000;https://+:7001
+      - Services__UserServiceUrl=http://user-service:5300
+      - FileStore__Path=/app/data/blocked_amounts.txt
+      - ConnectionStrings__Redis=redis:6379
+      - DAPR_HTTP_PORT=3500
+      - DAPR_GRPC_PORT=3600
+    depends_on:
+      - redis
+      - customer-dapr
+    volumes:
+      - shared_events:/app/data
+    networks:
+      - snappay-network
+
+  customer-dapr:
+    image: daprio/daprd:latest
+    container_name: customer_dapr
+    command: >
+      ./daprd
+      -app-id customer-service
+      -app-port 7000
+      -dapr-http-port 3500
+      -dapr-grpc-port 3600
+      -components-path /dapr/components
+      -config /dapr/config.yaml
+    ports:
+      - "3500:3500"
+      - "3600:3600"
+    volumes:
+      - ./dapr/components:/dapr/components:z
+      - ./dapr/config.yaml:/dapr/config.yaml:z
+    depends_on:
+      - redis
+    networks:
+      - snappay-network
+
+  # ===== ORDER SERVICE =====
+  order-service:
+    build:
+      context: .
+      dockerfile: OrderService/Dockerfile
+    container_name: order_service
+    ports:
+      - "7002:7002"
+      - "7003:7003"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:7002;https://+:7003
+      - ConnectionStrings__Redis=redis:6379
+      - FileStore__Path=/app/data/blocked_amounts.txt
+      - ServiceUrls__CustomerService=http://customer-service:7000
+      - DAPR_HTTP_PORT=3501
+      - DAPR_GRPC_PORT=3601
+    depends_on:
+      - redis
+      - customer-service
+      - order-dapr
+    volumes:
+      - shared_events:/app/data
+    networks:
+      - snappay-network
+
+  order-dapr:
+    image: daprio/daprd:latest
+    container_name: order_dapr
+    command: >
+      ./daprd
+      -app-id order-service
+      -app-port 7002
+      -dapr-http-port 3501
+      -dapr-grpc-port 3601
+      -components-path /dapr/components
+      -config /dapr/config.yaml
+    ports:
+      - "3501:3501"
+      - "3601:3601"
+    volumes:
+      - ./dapr/components:/dapr/components:z
+      - ./dapr/config.yaml:/dapr/config.yaml:z
+    depends_on:
+      - redis
+    networks:
+      - snappay-network
+
+  # ===== INVENTORY SERVICE =====
+  inventory-service:
+    build:
+      context: .
+      dockerfile: InventoryService/Dockerfile
+    container_name: inventory_service
+    ports:
+      - "7004:7004"
+      - "7005:7005"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:7004;https://+:7005
+      - FileStore__Path=/app/data/blocked_amounts.txt
+      - ConnectionStrings__Redis=redis:6379
+      - DAPR_HTTP_PORT=3502
+      - DAPR_GRPC_PORT=3602
+    depends_on:
+      - redis
+      - inventory-dapr
+    volumes:
+      - shared_events:/app/data
+    networks:
+      - snappay-network
+
+  inventory-dapr:
+    image: daprio/daprd:latest
+    container_name: inventory_dapr
+    command: >
+      ./daprd
+      -app-id inventory-service
+      -app-port 7004
+      -dapr-http-port 3502
+      -dapr-grpc-port 3602
+      -components-path /dapr/components
+      -config /dapr/config.yaml
+    ports:
+      - "3502:3502"
+      - "3602:3602"
+    volumes:
+      - ./dapr/components:/dapr/components:z
+      - ./dapr/config.yaml:/dapr/config.yaml:z
+    depends_on:
+      - redis
+    networks:
+      - snappay-network
+
+  # ===== USER SERVICE =====
+  user-service:
+    build:
+      context: .
+      dockerfile: UserService/Dockerfile
+    container_name: user_service
+    ports:
+      - "7006:7006"
+      - "7007:7007"
+      - "5300:5300"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:7006;https://+:7007;http://+:5300
+      - ConnectionStrings__Redis=redis:6379
+      - DAPR_HTTP_PORT=3503
+      - DAPR_GRPC_PORT=3603
+    depends_on:
+      - redis
+      - user-dapr
+    networks:
+      - snappay-network
+
+  user-dapr:
+    image: daprio/daprd:latest
+    container_name: user_dapr
+    command: >
+      ./daprd
+      -app-id user-service
+      -app-port 7006
+      -dapr-http-port 3503
+      -dapr-grpc-port 3603
+      -components-path /dapr/components
+      -config /dapr/config.yaml
+    ports:
+      - "3503:3503"
+      - "3603:3603"
+    volumes:
+      - ./dapr/components:/dapr/components:z
+      - ./dapr/config.yaml:/dapr/config.yaml:z
+    depends_on:
+      - redis
+    networks:
+      - snappay-network
+
+volumes:
+  redis_data:
+  shared_events:
+
+networks:
+  snappay-network:
+    driver: bridge

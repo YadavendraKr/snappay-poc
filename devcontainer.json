@@ -1,0 +1,35 @@
+{
+  "name": "SnapPay Microservices",
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
+  "service": "customer-service",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/podman-daemon:1": {},
+    "ghcr.io/devcontainers/features/dotnet:1": {
+      "version": "8.0"
+    }
+  },
+  "forwardPorts": [
+    7000, 7001, 7002, 7003, 7004, 7005, 7006, 7007,
+    3500, 3501, 3502, 3503, 6379
+  ],
+  "portsAttributes": {
+    "7000": { "label": "Customer Service", "onAutoForward": "notify" },
+    "7002": { "label": "Order Service", "onAutoForward": "notify" },
+    "7004": { "label": "Inventory Service", "onAutoForward": "notify" },
+    "7006": { "label": "User Service", "onAutoForward": "notify" },
+    "6379": { "label": "Redis", "onAutoForward": "ignore" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-azuretools.vscode-docker",
+        "ms-dotnettools.vscode-dotnet-runtime"
+      ]
+    }
+  },
+  "postCreateCommand": "chmod +x ./podman-run.sh"
+}

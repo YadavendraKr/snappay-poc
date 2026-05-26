@@ -1,0 +1,29 @@
+## Build and SDK folders
+bin/
+obj/
+publish/
+
+## Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Containers & Dapr
+.dapr/
+components/secrets.yaml
+
+## OS Files
+Thumbs.db
+Ehthumbs.db
+Desktop.ini
+
+## Local Data
+*.log
+blocked_amounts.txt
+
+## User-specific files
+.env
+*.swp
