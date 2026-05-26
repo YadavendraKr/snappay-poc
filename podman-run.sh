@@ -1,7 +1,7 @@
 #!/bin/bash
 # Podman build and run script for Snappay microservices with Dapr
 # Podman is a daemonless container engine (more secure than Docker)
-
+=
 set -e
 
 ACTION="${1:-up}"
