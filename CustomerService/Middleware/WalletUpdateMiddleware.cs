@@ -12,6 +12,7 @@ public class WalletUpdateMiddleware
     private readonly ILogger<WalletUpdateMiddleware> _logger;
     // POC Idempotency tracker: In production, this would be a table in the Customer database
     private static readonly ConcurrentDictionary<string, byte> _processedEvents = new();
+    private const string CacheKeyPrefix = "customer:";
 
     public WalletUpdateMiddleware(RequestDelegate next, ILogger<WalletUpdateMiddleware> logger)
     {
@@ -19,12 +20,12 @@ public class WalletUpdateMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context, CustomerDbContext dbContext)
+    public async Task InvokeAsync(HttpContext context, CustomerDbContext dbContext, ICacheService cacheService)
     {
         try
         {
             // Update wallet from blocked amounts on every API call
-            await UpdateWalletsFromBlockedAmountsAsync(dbContext);
+            await UpdateWalletsFromBlockedAmountsAsync(dbContext, cacheService);
         }
         catch (Exception ex)
         {
@@ -34,7 +35,7 @@ public class WalletUpdateMiddleware
         await _next(context);
     }
 
-    private async Task UpdateWalletsFromBlockedAmountsAsync(CustomerDbContext dbContext)
+    private async Task UpdateWalletsFromBlockedAmountsAsync(CustomerDbContext dbContext, ICacheService cacheService)
     {
         var lines = await FileStoreUtility.ReadAllLinesAsync();
         if (!lines.Any()) return;
@@ -82,6 +83,10 @@ public class WalletUpdateMiddleware
                     $"SUMMED DEDUCTION: Adding all {group.Count()} confirmed amounts for Customer {customerId}. " +
                     $"Total: {totalDeduction}. Wallet: {oldBalance} -> {customer.Wallet}"
                 );
+
+                // Invalidate customer cache to ensure next API call returns updated wallet
+                await cacheService.RemoveAsync($"{CacheKeyPrefix}{customerId}");
+                _logger.LogInformation($"Cache invalidated for Customer {customerId}");
 
                 // Mark all events in this group as processed in-memory
                 foreach (var ev in group)

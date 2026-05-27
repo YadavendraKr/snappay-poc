@@ -13,14 +13,15 @@
   },
   "forwardPorts": [
     7000, 7001, 7002, 7003, 7004, 7005, 7006, 7007,
-    3500, 3501, 3502, 3503, 6379
+    3500, 3501, 3502, 3503, 6379, 9411
   ],
   "portsAttributes": {
-    "7000": { "label": "Customer Service", "onAutoForward": "notify" },
-    "7002": { "label": "Order Service", "onAutoForward": "notify" },
-    "7004": { "label": "Inventory Service", "onAutoForward": "notify" },
-    "7006": { "label": "User Service", "onAutoForward": "notify" },
-    "6379": { "label": "Redis", "onAutoForward": "ignore" }
+    "7000": { "label": "Customer Service", "onAutoForward": "notify", "visibility": "public" },
+    "7002": { "label": "Order Service", "onAutoForward": "notify", "visibility": "public" },
+    "7004": { "label": "Inventory Service", "onAutoForward": "notify", "visibility": "public" },
+    "7006": { "label": "User Service", "onAutoForward": "notify", "visibility": "public" },
+    "6379": { "label": "Redis", "onAutoForward": "ignore", "visibility": "private" },
+    "9411": { "label": "Zipkin", "onAutoForward": "notify", "visibility": "public" }
   },
   "customizations": {
     "vscode": {
