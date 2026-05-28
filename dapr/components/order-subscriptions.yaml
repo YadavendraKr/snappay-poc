@@ -1,0 +1,18 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: order-subscriptions
+spec:
+  type: subscriptions
+  version: v1
+  metadata:
+  - name: topics
+    value: "inventory.stock-low,inventory.stock-available,payment.confirmed,customer.blocked"
+  - name: routes
+    value: |
+      {
+        "inventory.stock-low": "/api/orders/events/stock-low",
+        "inventory.stock-available": "/api/orders/events/stock-available",
+        "payment.confirmed": "/api/orders/events/payment-confirmed",
+        "customer.blocked": "/api/orders/events/customer-blocked"
+      }

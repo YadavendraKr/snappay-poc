@@ -1,0 +1,17 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: inventory-subscriptions
+spec:
+  type: subscriptions
+  version: v1
+  metadata:
+  - name: topics
+    value: "order.created,order.completed,order.failed"
+  - name: routes
+    value: |
+      {
+        "order.created": "/api/inventory/events/order-created",
+        "order.completed": "/api/inventory/events/order-completed",
+        "order.failed": "/api/inventory/events/order-failed"
+      }

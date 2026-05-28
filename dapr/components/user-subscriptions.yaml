@@ -1,0 +1,16 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: user-subscriptions
+spec:
+  type: subscriptions
+  version: v1
+  metadata:
+  - name: topics
+    value: "order.completed,customer.updated"
+  - name: routes
+    value: |
+      {
+        "order.completed": "/api/users/events/order-completed",
+        "customer.updated": "/api/users/events/customer-updated"
+      }

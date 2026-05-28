@@ -92,6 +92,32 @@ public class OrdersController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("events/inventory-low")]
+    public IActionResult HandleInventoryLow([FromBody] InventoryLowEvent evt)
+    {
+        if (evt == null || evt.OrderId <= 0)
+            return BadRequest(new { message = "OrderId and ProductName are required" });
+
+        _logger.LogWarning(
+            "Dapr subscription invoked inventory-low for order {OrderId}. Holding fulfillment until inventory is replenished.",
+            evt.OrderId);
+
+        return Ok(new
+        {
+            message = "Order hold rule applied through Dapr subscription delivery.",
+            orderId = evt.OrderId,
+            productName = evt.ProductName,
+            action = "hold-processing"
+        });
+    }
+}
+
+public class InventoryLowEvent
+{
+    public int OrderId { get; set; }
+    public string? ProductName { get; set; }
+    public int Quantity { get; set; }
 }
 
 public class UpdateOrderStatusRequest

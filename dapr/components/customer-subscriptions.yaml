@@ -1,0 +1,18 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: customer-subscriptions
+spec:
+  type: subscriptions
+  version: v1
+  metadata:
+  - name: topics
+    value: "order.completed,order.failed,wallet.deducted,inventory.stock-low"
+  - name: routes
+    value: |
+      {
+        "order.completed": "/api/customers/events/order-completed",
+        "order.failed": "/api/customers/events/order-failed",
+        "wallet.deducted": "/api/customers/events/wallet-deducted",
+        "inventory.stock-low": "/api/customers/events/inventory-low"
+      }

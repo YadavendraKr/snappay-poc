@@ -11,6 +11,9 @@ public class CustomersController : ControllerBase
     private readonly ICustomerService _customerService;
     private readonly ILogger<CustomersController> _logger;
 
+    private static readonly decimal LoyaltyThreshold = 100m;
+    private static readonly decimal LoyaltyBonusAmount = 10m;
+
     public CustomersController(ICustomerService customerService, ILogger<CustomersController> logger)
     {
         _customerService = customerService;
@@ -109,4 +112,36 @@ public class CustomersController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("events/order-completed")]
+    public IActionResult HandleOrderCompleted([FromBody] OrderCompletedEvent evt)
+    {
+        if (evt == null || evt.CustomerId <= 0)
+            return BadRequest(new { message = "CustomerId and TotalAmount are required" });
+
+        var loyaltyBonus = evt.TotalAmount >= LoyaltyThreshold ? LoyaltyBonusAmount : 0m;
+        var loyaltyTier = evt.TotalAmount >= 250m ? "gold" : "standard";
+
+        _logger.LogInformation(
+            "Dapr subscription invoked order-completed for customer {CustomerId}. Applied loyalty bonus {LoyaltyBonus} and tier {LoyaltyTier}.",
+            evt.CustomerId,
+            loyaltyBonus,
+            loyaltyTier);
+
+        return Ok(new
+        {
+            message = "Customer loyalty rule applied through Dapr subscription delivery.",
+            customerId = evt.CustomerId,
+            orderId = evt.OrderId,
+            loyaltyBonus,
+            loyaltyTier
+        });
+    }
+}
+
+public class OrderCompletedEvent
+{
+    public int CustomerId { get; set; }
+    public int OrderId { get; set; }
+    public decimal TotalAmount { get; set; }
 }
