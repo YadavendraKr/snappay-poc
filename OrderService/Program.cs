@@ -4,7 +4,6 @@ using Shared.Infrastructure;
 using Shared.Models;
 using OrderService.Models;
 using OrderService.Services;
-using OrderService.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,8 +79,7 @@ var app = builder.Build();
 // Use response compression middleware early
 app.UseResponseCompression();
 
-// Register Dapr request logging middleware for tracking order/suborder operations
-app.UseMiddleware<DaprRequestLoggingMiddleware>();
+// Dapr request logging middleware removed — sidecar/observability handles this
 
 // Configure pipeline
 if (app.Environment.IsDevelopment())
